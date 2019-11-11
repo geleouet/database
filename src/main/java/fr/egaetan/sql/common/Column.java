@@ -1,11 +1,10 @@
-package fr.egaetan.sql.base;
+package fr.egaetan.sql.common;
 
 import fr.egaetan.sql.base.Table.ColumnType;
-import fr.egaetan.sql.base.Table.TableDataRow;
 
 public interface Column {
 
-	Object readFrom(TableDataRow row);
+	Object readFrom(DataRow row);
 
 	String name();
 

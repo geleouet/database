@@ -5,10 +5,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import fr.egaetan.sql.Query;
-import fr.egaetan.sql.Resultat;
 import fr.egaetan.sql.Query.RowPredicate;
+import fr.egaetan.sql.Resultat;
 import fr.egaetan.sql.Resultat.ResultatBuilder;
+import fr.egaetan.sql.common.Column;
+import fr.egaetan.sql.common.DataRow;
 
 public class Table {
 
@@ -22,12 +23,17 @@ public class Table {
 		;
 	}
 	
-	public static class TableDataRow {
-		Object[] data;
+	public static class TableDataRow implements DataRow {
+		private final Object[] data;
 
 		public TableDataRow(Object[] data) {
 			super();
 			this.data = data;
+		}
+
+		@Override
+		public Object[] data() {
+			return data;
 		}
 		
 	}
@@ -84,7 +90,7 @@ public class Table {
 	public Resultat select(List<Column> resultColumns, List<RowPredicate> predicates) {
 		ResultatBuilder resultat = Resultat.create(resultColumns);
 		int nbResultColumns = resultColumns.size();
-		for (TableDataRow row : data.rows) {
+		for (DataRow row : data.rows) {
 			if (predicates.stream().allMatch(p -> p.valid(row))) {
 				Object[] resultRow = new Object[nbResultColumns];
 				for (int i = 0; i < nbResultColumns; i++) {
@@ -162,4 +168,9 @@ public class Table {
 		return columns.stream().anyMatch(c -> column.need(c));
 	}
 
+	
+	@Override
+	public String toString() {
+		return name;
+	}
 }

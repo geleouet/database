@@ -3,8 +3,8 @@ package fr.egaetan.sql;
 import java.util.ArrayList;
 import java.util.List;
 
-import fr.egaetan.sql.base.Column;
 import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.common.Column;
 
 public class Resultat {
 

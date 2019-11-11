@@ -135,6 +135,33 @@ public class SimpleDatabaseShould {
 		
 	}
 	@Test
+	public void createTable_insert_select_string_filtered_colonnes_where() {
+		// GIVEN
+		Base base = Base.create();
+		Table table = base
+				.createTable("client")
+				.addColumn("id", ColumnType.ENTIER)
+				.addColumn("value", ColumnType.STRING)
+				.build();
+		table.insert(table.values().set("id", 1).set("value", "John"));
+		table.insert(table.values().set("id", 2).set("value", "Jack"));
+		table.insert(table.values().set("id", 3).set("value", "Paul"));
+		
+		// WHEN
+		Resultat res = new Query().select(table.column("value"))
+				.from(table)
+				.where(table.column("id")).isEqualTo(2)
+				.execute();
+		
+		// THEN
+		Assertions.assertThat(res.size()).isEqualTo(1);
+		Assertions.assertThat(res.columns().size()).isEqualTo(1);
+		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.STRING);
+		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("Jack");
+		
+	}
+	@Test
 	public void createTable_insert_select_where() {
 		// GIVEN
 		Base base = Base.create();

@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import fr.egaetan.sql.Resultat.ResultatBuilder;
-import fr.egaetan.sql.base.Column;
+import fr.egaetan.sql.base.ColumnDoesntExist;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
-import fr.egaetan.sql.base.Table.TableDataRow;
+import fr.egaetan.sql.common.Column;
+import fr.egaetan.sql.common.DataRow;
 
 public class Query {
 
@@ -24,7 +25,7 @@ public class Query {
 			this.value = value;
 		}
 
-		public boolean valid(TableDataRow row) {
+		public boolean valid(DataRow row) {
 			Object data = column.readFrom(row);
 			return value.equals(data);
 		}
@@ -92,11 +93,13 @@ public class Query {
 		private List<Table> tables;
 		private QuerySelect querySelect;
 		private List<QueryPredicate> queryPredicates;
+		private List<QueryPredicateJoin> queryJoinPredicates;
 
 		public QueryFrom(QuerySelect querySelect, Table ... tables) {
 			this.tables = new ArrayList<>(Arrays.asList(tables));
 			this.querySelect = querySelect;
 			this.queryPredicates = new ArrayList<>();
+			this.queryJoinPredicates = new ArrayList<>();
 		}
 
 		public void addPredicate(QueryPredicate queryPredicate) {
@@ -144,9 +147,11 @@ public class Query {
 					}
 					
 				}
+
 				
-				builder.addRow(row);
-				
+				if (queryJoinPredicates.stream().allMatch(q -> q.verify(select.columns, row))) {
+					builder.addRow(row);
+				}
 				
 				finished = true;
 				for (int i = 0; i < current.size(); i++) {
@@ -170,23 +175,84 @@ public class Query {
 			return where(column);
 		}
 
-		public QueryJoin innerJoin(Table tableColor) {
-			return null;
+		public QueryJoin innerJoin(Table table) {
+			return new QueryJoin(this, table);
+		}
+		
+	}
+	
+	public static interface PredicateJoin {
+		boolean check(Object a, Object b);
+	}
+	
+	public static class QueryPredicateJoin {
+		Column a;
+		Column b;
+		PredicateJoin predicate;
+		
+		public QueryPredicateJoin(Column a, Column b, PredicateJoin predicate) {
+			super();
+			this.a = a;
+			this.b = b;
+			this.predicate = predicate;
+		}
+		
+		public boolean verify(Column[] columns, Object[] row) {
+			int aColonne = -1;
+			int bColonne = -1;
+			for (int i = 0; i < columns.length; i++) {
+				String columnName = columns[i].name();
+				if (columnName.equalsIgnoreCase(a.name())) {
+					aColonne = i;
+				}
+				if (columnName.equalsIgnoreCase(b.name())) {
+					bColonne = i;
+				}
+			}
+			if (aColonne == -1) {
+				throw new ColumnDoesntExist(a.name());
+			}
+			if (bColonne == -1) {
+				throw new ColumnDoesntExist(b.name());
+			}
+			
+			return predicate.check(row[aColonne], row[bColonne]);
 		}
 		
 	}
 	
 	public static class QueryJoinOn {
 
+		private QueryFrom queryFrom;
+		private Table table;
+		private Column column;
+
+		public QueryJoinOn(QueryFrom queryFrom, Table table, Column column) {
+			this.queryFrom = queryFrom;
+			this.table = table;
+			this.column = column;
+		}
+
 		public QueryFrom isEqualTo(Column column) {
-			return null;
+			queryFrom.queryJoinPredicates.add(new QueryPredicateJoin(this.column, column, (a,b) -> a.equals(b)));
+			queryFrom.tables.add(table);
+			return queryFrom;
 		}
 		
 	}
 	public static class QueryJoin {
 
+		private QueryFrom queryFrom;
+		private Table table;
+
+		public QueryJoin(QueryFrom queryFrom, Table table) {
+			this.queryFrom = queryFrom;
+			this.table = table;
+			
+		}
+
 		public  QueryJoinOn on(Column column) {
-			return null;
+			return new QueryJoinOn(queryFrom, table, column);
 		}
 		
 	}
@@ -234,7 +300,7 @@ public class Query {
 			}
 			
 			@Override
-			public Object readFrom(TableDataRow row) {
+			public Object readFrom(DataRow row) {
 				return object.apply((Integer) column.readFrom(row));
 			}
 			
@@ -258,7 +324,7 @@ public class Query {
 			}
 			
 			@Override
-			public Object readFrom(TableDataRow row) {
+			public Object readFrom(DataRow row) {
 				return object.apply((String) column.readFrom(row));
 			}
 			

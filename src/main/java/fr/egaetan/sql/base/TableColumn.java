@@ -1,7 +1,8 @@
 package fr.egaetan.sql.base;
 
 import fr.egaetan.sql.base.Table.ColumnType;
-import fr.egaetan.sql.base.Table.TableDataRow;
+import fr.egaetan.sql.common.Column;
+import fr.egaetan.sql.common.DataRow;
 
 public class TableColumn implements Column {
 	
@@ -16,8 +17,8 @@ public class TableColumn implements Column {
 	}
 
 	@Override
-	public Object readFrom(TableDataRow row) {
-		return row.data[index];
+	public Object readFrom(DataRow row) {
+		return row.data()[index];
 	}
 
 	@Override
