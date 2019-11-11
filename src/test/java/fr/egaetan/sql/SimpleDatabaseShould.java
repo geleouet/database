@@ -26,15 +26,39 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
 		Assertions.assertThat(res.columns().size()).isEqualTo(1);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("value");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.ENTIER);
 		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo(2);
+	}
+	
+	@Test
+	public void select_string() {
+		// GIVEN
+		Base base = Base.create();
+		Table table = base
+				.createTable("client")
+				.addColumn("id", ColumnType.ENTIER)
+				.addColumn("value", ColumnType.STRING)
+				.build();
+		table.insert(table.values().set("id", 1).set("value", "John"));
+		table.insert(table.values().set("id", 2).set("value", "Jack"));
+		
+		// WHEN
+		Resultat res = table.select(table.column("value"));
+		
+		// THEN
+		Assertions.assertThat(res.size()).isEqualTo(2);
+		Assertions.assertThat(res.columns().size()).isEqualTo(1);
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.STRING);
+		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("John");
+		Assertions.assertThat(res.rowAt(1).value("value")).isEqualTo("Jack");
 		
 	}
 	
 	@Test
 	// select value + 10 as plus10 from client;
-	public void createTable_insert_select_entier_formula() {
+	public void select_entier_formula() {
 		// GIVEN
 		Base base = Base.create();
 		Table table = base
@@ -52,13 +76,13 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
 		Assertions.assertThat(res.columns().size()).isEqualTo(1);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("plus10");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("plus10");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.ENTIER);
 		Assertions.assertThat(res.rowAt(0).value("plus10")).isEqualTo(12);
 		
 	}
 	@Test
-	public void createTable_insert_select_string_formula() {
+	public void select_string_formula() {
 		// GIVEN
 		Base base = Base.create();
 		Table table = base
@@ -76,37 +100,14 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
 		Assertions.assertThat(res.columns().size()).isEqualTo(1);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("world");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("world");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.STRING);
 		Assertions.assertThat(res.rowAt(0).value("world")).isEqualTo("helloworld");
 		
 	}
+	
 	@Test
-	public void createTable_insert_select_string() {
-		// GIVEN
-		Base base = Base.create();
-		Table table = base
-				.createTable("client")
-				.addColumn("id", ColumnType.ENTIER)
-				.addColumn("value", ColumnType.STRING)
-				.build();
-		table.insert(table.values().set("id", 1).set("value", "John"));
-		table.insert(table.values().set("id", 2).set("value", "Jack"));
-		
-		// WHEN
-		Resultat res = table.select(table.column("value"));
-		
-		// THEN
-		Assertions.assertThat(res.size()).isEqualTo(2);
-		Assertions.assertThat(res.columns().size()).isEqualTo(1);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("value");
-		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.STRING);
-		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("John");
-		Assertions.assertThat(res.rowAt(1).value("value")).isEqualTo("Jack");
-		
-	}
-	@Test
-	public void createTable_insert_select_string_multi_colonnes() {
+	public void select_string_multi_colonnes() {
 		// GIVEN
 		Base base = Base.create();
 		Table table = base
@@ -124,8 +125,8 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(2);
 		Assertions.assertThat(res.columns().size()).isEqualTo(2);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("id");
-		Assertions.assertThat(res.columns().get(1).name()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("id");
+		Assertions.assertThat(res.columns().get(1).displayName()).isEqualTo("value");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.ENTIER);
 		Assertions.assertThat(res.columns().get(1).type()).isEqualTo(ColumnType.STRING);
 		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("John");
@@ -135,7 +136,7 @@ public class SimpleDatabaseShould {
 		
 	}
 	@Test
-	public void createTable_insert_select_string_filtered_colonnes_where() {
+	public void select_string_filtered_colonnes_where() {
 		// GIVEN
 		Base base = Base.create();
 		Table table = base
@@ -156,13 +157,13 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
 		Assertions.assertThat(res.columns().size()).isEqualTo(1);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("value");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.STRING);
 		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("Jack");
 		
 	}
 	@Test
-	public void createTable_insert_select_where() {
+	public void select_where() {
 		// GIVEN
 		Base base = Base.create();
 		Table table = base
@@ -182,8 +183,8 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
 		Assertions.assertThat(res.columns().size()).isEqualTo(2);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("id");
-		Assertions.assertThat(res.columns().get(1).name()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("id");
+		Assertions.assertThat(res.columns().get(1).displayName()).isEqualTo("value");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.ENTIER);
 		Assertions.assertThat(res.columns().get(1).type()).isEqualTo(ColumnType.STRING);
 		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("Jack");
@@ -191,7 +192,7 @@ public class SimpleDatabaseShould {
 		
 	}
 	@Test
-	public void createTable_insert_select_where_and() {
+	public void select_where_and() {
 		// GIVEN
 		Base base = Base.create();
 		Table table = base
@@ -217,8 +218,8 @@ public class SimpleDatabaseShould {
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
 		Assertions.assertThat(res.columns().size()).isEqualTo(2);
-		Assertions.assertThat(res.columns().get(0).name()).isEqualTo("id");
-		Assertions.assertThat(res.columns().get(1).name()).isEqualTo("value");
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("id");
+		Assertions.assertThat(res.columns().get(1).displayName()).isEqualTo("value");
 		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.ENTIER);
 		Assertions.assertThat(res.columns().get(1).type()).isEqualTo(ColumnType.STRING);
 		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("Hugh");

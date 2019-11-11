@@ -1,4 +1,4 @@
-package fr.egaetan.sql.base;
+package fr.egaetan.sql.exception;
 
 public class ColumnDoesntExist extends RuntimeException {
 

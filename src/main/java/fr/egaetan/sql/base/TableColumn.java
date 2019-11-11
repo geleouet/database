@@ -9,9 +9,11 @@ public class TableColumn implements Column {
 	String name;
 	ColumnType type;
 	int index;
+	String qualifiedName;
 
-	public TableColumn(String name, ColumnType type, int index) {
+	public TableColumn(String name, String qualifiedName, ColumnType type, int index) {
 		this.name = name;
+		this.qualifiedName = qualifiedName;
 		this.type = type;
 		this.index = index;
 	}
@@ -22,8 +24,13 @@ public class TableColumn implements Column {
 	}
 
 	@Override
-	public String name() {
+	public String displayName() {
 		return name;
+	}
+
+	@Override
+	public String qualifiedName() {
+		return qualifiedName;
 	}
 	
 	@Override

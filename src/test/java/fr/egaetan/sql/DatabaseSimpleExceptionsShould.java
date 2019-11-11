@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 import fr.egaetan.sql.base.Base;
-import fr.egaetan.sql.base.ColumnDoesntExist;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.exception.ColumnDoesntExist;
 
 public class DatabaseSimpleExceptionsShould {
 	
@@ -20,7 +20,6 @@ public class DatabaseSimpleExceptionsShould {
 				.addColumn("id", ColumnType.ENTIER)
 				.addColumn("value", ColumnType.ENTIER)
 				.build();
-		table.insert(table.values().set("id", 1).set("value", 2));
 		
 		// THEN
 		assertThrows(ColumnDoesntExist.class, () -> 

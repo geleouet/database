@@ -7,10 +7,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import fr.egaetan.sql.Resultat.ResultatBuilder;
-import fr.egaetan.sql.base.ColumnDoesntExist;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.common.Column;
+import fr.egaetan.sql.common.Column.ColumnQualifiedName;
+import fr.egaetan.sql.exception.ColumnDoesntExist;
+import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
 import fr.egaetan.sql.common.DataRow;
 
 public class Query {
@@ -87,6 +89,7 @@ public class Query {
 		}
 
 	}
+	
 
 	public static class QueryFrom {
 		
@@ -113,8 +116,10 @@ public class Query {
 		public Resultat execute() {
 			QuerySelect select = querySelect;
 			List<Resultat> resultats = new ArrayList<>();
-			for (Table table : tables) {
-
+			
+			for (int i = 0; i < tables.size(); i++) {
+				
+				Table table = tables.get(i);
 				List<RowPredicate> predicates = new ArrayList<>();
 				
 				for (QueryPredicate queryPredicate : queryPredicates) {
@@ -122,25 +127,33 @@ public class Query {
 				}
 				
 				List<Column> columns = select.columns(table);
+				for (QueryPredicateJoin q : queryJoinPredicates) {
+					if (table.has(q.a) && columns.stream().noneMatch(c -> c.qualified().identify(q.a.qualified()))) {
+						columns.add(q.a);
+					}
+					if (table.has(q.b) && columns.stream().noneMatch(c -> c.qualified().identify(q.b.qualified()))) {
+						columns.add(q.b);
+					}
+				}
+				
+				
 				Resultat resultat = table.select(columns, predicates);
 				resultats.add(resultat);
 			}
 			
 			ResultatBuilder builder = new ResultatBuilder(Arrays.asList(select.columns));
-			List<Integer> current = new ArrayList<>();
-			for (int i = 0; i < resultats.size(); i++) {
-				current.add(0);
-			}
+			List<Integer> current = initCartesianProductIndex(resultats);
 			
 			boolean finished = false;
 			while (!finished) {
 				Object[] row = new Object[select.columns.length];
 				for (int i = 0; i < select.columns.length; i++) {
-					String columnName = select.columns[i].name();
+					ColumnQualifiedName columnQualified = select.columns[i].qualified();
+					
 					for (int j = 0; j < resultats.size(); j++) {
 						Resultat res = resultats.get(j);
-						if (res.columns().stream().anyMatch(r -> r.name().equalsIgnoreCase(columnName))) {
-							Object value = res.rowAt(current.get(j)).value(columnName);
+						if (res.columns().stream().anyMatch(r -> columnQualified.identify(r.qualified()))) {
+							Object value = res.rowAt(current.get(j)).value(columnQualified);
 							row[i] = value;
 							break;
 						}
@@ -148,10 +161,30 @@ public class Query {
 					
 				}
 
+				boolean allChecked = true;
+				for (QueryPredicateJoin q : queryJoinPredicates) {
+					ColumnQualifiedName joinA = q.a.qualified();
+					ColumnQualifiedName joinB = q.b.qualified();
+					Object a = null;
+					Object b = null;
+					for (int j = 0; j < resultats.size(); j++) {
+						Resultat res = resultats.get(j);
+						if (res.columns().stream().anyMatch(r -> joinA.identify(r.qualified()))) {
+							Object value = res.rowAt(current.get(j)).value(joinA);
+							a = value;
+						}
+						if (res.columns().stream().anyMatch(r -> joinB.identify(r.qualified()))) {
+							Object value = res.rowAt(current.get(j)).value(joinB);
+							b = value;
+						}
+					}
+					allChecked = allChecked && q.predicate.check(a, b);
+				}
 				
-				if (queryJoinPredicates.stream().allMatch(q -> q.verify(select.columns, row))) {
+				if (allChecked) {
 					builder.addRow(row);
 				}
+				
 				
 				finished = true;
 				for (int i = 0; i < current.size(); i++) {
@@ -171,11 +204,23 @@ public class Query {
 			return builder.build();
 		}
 
+		private List<Integer> initCartesianProductIndex(List<Resultat> resultats) {
+			List<Integer> current = new ArrayList<>();
+			for (int i = 0; i < resultats.size(); i++) {
+				current.add(0);
+			}
+			return current;
+		}
+
 		public QueryWhere and(Column column) {
 			return where(column);
 		}
 
 		public QueryJoin innerJoin(Table table) {
+			if (tables.stream().anyMatch(t -> t.name().equalsIgnoreCase(table.name()))) {
+				throw new TableNameSpecifiedMoreThanOnce(table.name());
+			}
+			
 			return new QueryJoin(this, table);
 		}
 		
@@ -201,19 +246,19 @@ public class Query {
 			int aColonne = -1;
 			int bColonne = -1;
 			for (int i = 0; i < columns.length; i++) {
-				String columnName = columns[i].name();
-				if (columnName.equalsIgnoreCase(a.name())) {
+				ColumnQualifiedName columnName = columns[i].qualified();
+				if (columnName.identify(a.qualified())) {
 					aColonne = i;
 				}
-				if (columnName.equalsIgnoreCase(b.name())) {
+				if (columnName.identify(b.qualified())) {
 					bColonne = i;
 				}
 			}
 			if (aColonne == -1) {
-				throw new ColumnDoesntExist(a.name());
+				throw new ColumnDoesntExist(a.qualifiedName());
 			}
 			if (bColonne == -1) {
-				throw new ColumnDoesntExist(b.name());
+				throw new ColumnDoesntExist(b.qualifiedName());
 			}
 			
 			return predicate.check(row[aColonne], row[bColonne]);
@@ -305,7 +350,7 @@ public class Query {
 			}
 			
 			@Override
-			public String name() {
+			public String displayName() {
 				return name;
 			}
 		};
@@ -329,7 +374,7 @@ public class Query {
 			}
 			
 			@Override
-			public String name() {
+			public String displayName() {
 				return name;
 			}
 		};

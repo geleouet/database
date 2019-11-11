@@ -10,6 +10,7 @@ import fr.egaetan.sql.Resultat;
 import fr.egaetan.sql.Resultat.ResultatBuilder;
 import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.DataRow;
+import fr.egaetan.sql.exception.ColumnDoesntExist;
 
 public class Table {
 
@@ -67,7 +68,7 @@ public class Table {
 
 		public TableBuilder addColumn(String name, ColumnType type) {
 			int index = columns.size();
-			columns.add(new TableColumn(name, type, index));
+			columns.add(new TableColumn(name, this.name + "." + name, type, index));
 			return this;
 		}
 
@@ -156,6 +157,7 @@ public class Table {
 
 	public Column column(String string) {
 		return columns.stream().filter(c -> c.name.equalsIgnoreCase(string))
+				
 				.findFirst()
 				.orElseThrow(() -> new ColumnDoesntExist(string));
 	}
@@ -171,6 +173,10 @@ public class Table {
 	
 	@Override
 	public String toString() {
+		return name;
+	}
+	
+	public String name() {
 		return name;
 	}
 }
