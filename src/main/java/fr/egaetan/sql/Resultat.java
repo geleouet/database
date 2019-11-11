@@ -2,6 +2,7 @@ package fr.egaetan.sql;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.common.Column;
@@ -11,6 +12,9 @@ import fr.egaetan.sql.common.DataRow;
 public class Resultat {
 
 	
+	private long timeSpent;
+
+
 	public static class ResultatColumn implements Column {
 
 		private String name;
@@ -64,8 +68,10 @@ public class Resultat {
 
 		List<ResultatRow> rows = new ArrayList<>();
 		List<ResultatColumn> columns = new ArrayList<>();
+		private long startTime;
 
 		public ResultatBuilder(List<? extends Column> columns) {
+			this.startTime = System.currentTimeMillis();
 			this.columns = new ArrayList<>(columns.size());
 			for (int i = 0; i < columns.size(); i++) {
 				Column from = columns.get(i);
@@ -74,7 +80,7 @@ public class Resultat {
 		}
 
 		public Resultat build() {
-			return new Resultat(rows, columns);
+			return new Resultat(rows, columns, System.currentTimeMillis() - startTime);
 		}
 
 		public void addRow(Object[] data) {
@@ -87,9 +93,10 @@ public class Resultat {
 		return new ResultatBuilder(columns);
 	}
 
-	public Resultat(List<ResultatRow> rows, List<ResultatColumn> columns) {
+	public Resultat(List<ResultatRow> rows, List<ResultatColumn> columns, long timeSpent) {
 		this.rows = rows;
 		this.columns = columns;
+		this.timeSpent = timeSpent;
 	}
 
 	List<ResultatRow> rows = new ArrayList<>();
@@ -136,7 +143,26 @@ public class Resultat {
 
 	@Override
 	public String toString() {
+		List<Integer> columnSize = new ArrayList<>();
+		for (int i = 0; i < columns.size(); i ++) {
+			columnSize.add(columns.get(i).displayName().length() + 2);
+		}
+		for (int i = 0; i < columns.size(); i ++) {
+			final int i$ = i;
+			OptionalInt max = rows.stream().map(r -> r.data()[i$]).mapToInt(s -> s.toString().length()).max();
+			max.ifPresent(l -> {
+				if (l > columnSize.get(i$)) {
+					columnSize.set(i$, l);
+				}
+			});
+		}
+		
+		
+		
 		StringBuilder res = new StringBuilder();
+		
+		res.append(rows.size() + " rows in " + timeSpent + "ms\n");
+		
 		StringBuilder lineFormat = new StringBuilder();
 		StringBuilder lineHeaderFormat = new StringBuilder();
 		Object[] headers = new Object[columns.size()];
@@ -145,8 +171,8 @@ public class Resultat {
 				lineFormat.append(" | ");
 				lineHeaderFormat.append(" | ");
 			}
-			lineFormat.append("%10s");
-			lineHeaderFormat.append(" %-9s");
+			lineFormat.append("%"+columnSize.get(i)+"s");
+			lineHeaderFormat.append(" %-"+(columnSize.get(i)-1)+"s");
 			headers[i] = columns.get(i).displayName();
 		}
 		String lineFormat$ = lineFormat.toString();
@@ -157,7 +183,7 @@ public class Resultat {
 			if (i != 0) {
 				separator.append("-+-");
 			}
-			for (int j = 0; j < 10; j++) {
+			for (int j = 0; j < columnSize.get(i); j++) {
 				separator.append("-");
 			}
 		}

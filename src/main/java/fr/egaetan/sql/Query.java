@@ -115,6 +115,7 @@ public class Query {
 
 		public Resultat execute() {
 			QuerySelect select = querySelect;
+			ResultatBuilder builder = new ResultatBuilder(Arrays.asList(select.columns));
 			List<Resultat> resultats = new ArrayList<>();
 			
 			for (int i = 0; i < tables.size(); i++) {
@@ -141,7 +142,6 @@ public class Query {
 				resultats.add(resultat);
 			}
 			
-			ResultatBuilder builder = new ResultatBuilder(Arrays.asList(select.columns));
 			List<Integer> current = initCartesianProductIndex(resultats);
 			
 			boolean finished = false;

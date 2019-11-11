@@ -55,6 +55,7 @@
 				<configuration>
 					<includes>
 						<include>**/*Should</include>
+						<include>**/*Test</include>
 					</includes>
 					<outputDirectory>${basedir}/target/surefire-reports/romans/</outputDirectory>
 				</configuration>
