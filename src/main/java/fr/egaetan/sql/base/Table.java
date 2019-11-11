@@ -149,7 +149,9 @@ public class Table {
 	}
 
 	public Column column(String string) {
-		return columns.stream().filter(c -> c.name.equalsIgnoreCase(string)).findFirst().get();
+		return columns.stream().filter(c -> c.name.equalsIgnoreCase(string))
+				.findFirst()
+				.orElseThrow(() -> new ColumnDoesntExist(string));
 	}
 
 	public Values values() {

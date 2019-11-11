@@ -7,7 +7,7 @@ import fr.egaetan.sql.base.Base;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
 
-public class AppShould {
+public class SimpleDatabaseShould {
 	
 	@Test
 	public void createTable_insert_select_entier() {

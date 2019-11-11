@@ -5,7 +5,6 @@ import java.util.List;
 
 import fr.egaetan.sql.base.Column;
 import fr.egaetan.sql.base.Table.ColumnType;
-import fr.egaetan.sql.base.TableColumn;
 
 public class Resultat {
 
@@ -118,4 +117,5 @@ public class Resultat {
 		return new ResultatLine(rows.get(i), this);
 	}
 
+	
 }

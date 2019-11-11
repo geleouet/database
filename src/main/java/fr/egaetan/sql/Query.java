@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import fr.egaetan.sql.Resultat.ResultatBuilder;
 import fr.egaetan.sql.base.Column;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
@@ -89,12 +89,12 @@ public class Query {
 
 	public static class QueryFrom {
 		
-		private Table table;
+		private List<Table> tables;
 		private QuerySelect querySelect;
 		private List<QueryPredicate> queryPredicates;
 
-		public QueryFrom(Table table, QuerySelect querySelect) {
-			this.table = table;
+		public QueryFrom(QuerySelect querySelect, Table ... tables) {
+			this.tables = new ArrayList<>(Arrays.asList(tables));
 			this.querySelect = querySelect;
 			this.queryPredicates = new ArrayList<>();
 		}
@@ -109,18 +109,84 @@ public class Query {
 
 		public Resultat execute() {
 			QuerySelect select = querySelect;
-			List<RowPredicate> predicates = new ArrayList<>();
-			
-			for (QueryPredicate queryPredicate : queryPredicates) {
-				predicates.addAll(queryPredicate.predicates(table));
+			List<Resultat> resultats = new ArrayList<>();
+			for (Table table : tables) {
+
+				List<RowPredicate> predicates = new ArrayList<>();
+				
+				for (QueryPredicate queryPredicate : queryPredicates) {
+					predicates.addAll(queryPredicate.predicates(table));
+				}
+				
+				List<Column> columns = select.columns(table);
+				Resultat resultat = table.select(columns, predicates);
+				resultats.add(resultat);
 			}
 			
-			Resultat resultat = table.select(select.columns(table), predicates);
-			return resultat;
+			ResultatBuilder builder = new ResultatBuilder(Arrays.asList(select.columns));
+			List<Integer> current = new ArrayList<>();
+			for (int i = 0; i < resultats.size(); i++) {
+				current.add(0);
+			}
+			
+			boolean finished = false;
+			while (!finished) {
+				Object[] row = new Object[select.columns.length];
+				for (int i = 0; i < select.columns.length; i++) {
+					String columnName = select.columns[i].name();
+					for (int j = 0; j < resultats.size(); j++) {
+						Resultat res = resultats.get(j);
+						if (res.columns().stream().anyMatch(r -> r.name().equalsIgnoreCase(columnName))) {
+							Object value = res.rowAt(current.get(j)).value(columnName);
+							row[i] = value;
+							break;
+						}
+					}
+					
+				}
+				
+				builder.addRow(row);
+				
+				
+				finished = true;
+				for (int i = 0; i < current.size(); i++) {
+					if (current.get(i) + 1 < resultats.get(i).size()) {
+						current.set(i, current.get(i) + 1);
+						finished = false;
+						break;
+					}
+					else {
+						current.set(i, 0);
+					}
+				}
+			}
+			
+			
+			
+			return builder.build();
 		}
 
 		public QueryWhere and(Column column) {
 			return where(column);
+		}
+
+		public QueryJoin innerJoin(Table tableColor) {
+			return null;
+		}
+		
+	}
+	
+	public static class QueryJoinOn {
+
+		public QueryFrom isEqualTo(Column column) {
+			return null;
+		}
+		
+	}
+	public static class QueryJoin {
+
+		public  QueryJoinOn on(Column column) {
+			return null;
 		}
 		
 	}
@@ -137,8 +203,8 @@ public class Query {
 			return Arrays.stream(columns).filter(c -> table.has(c)).collect(Collectors.toList());
 		}
 
-		public QueryFrom from(Table table) {
-			return new QueryFrom(table, this);
+		public QueryFrom from(Table ... tables) {
+			return new QueryFrom(this, tables);
 		}
 
 	}
