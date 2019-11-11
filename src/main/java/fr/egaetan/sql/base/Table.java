@@ -1,17 +1,19 @@
-package fr.egaetan.sql;
+package fr.egaetan.sql.base;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import fr.egaetan.sql.Query;
+import fr.egaetan.sql.Resultat;
 import fr.egaetan.sql.Query.RowPredicate;
 import fr.egaetan.sql.Resultat.ResultatBuilder;
 
 public class Table {
 
 	private String name;
-	private List<Column> columns;
+	private List<TableColumn> columns;
 	private TableData data;
 
 	public static enum ColumnType {
@@ -48,28 +50,10 @@ public class Table {
 		
 	}
 	
-	public static class Column {
-		
-		String name;
-		ColumnType type;
-		int index;
-
-		public Column(String name, ColumnType type, int index) {
-			this.name = name;
-			this.type = type;
-			this.index = index;
-		}
-
-		public Object readFrom(TableDataRow row) {
-			return row.data[index];
-		}
-
-	}
-	
 	public static class TableBuilder {
 
 		private String name;
-		private List<Column> columns = new ArrayList<>();
+		private List<TableColumn> columns = new ArrayList<>();
 		
 		public TableBuilder(String name) {
 			this.name = name;
@@ -77,7 +61,7 @@ public class Table {
 
 		public TableBuilder addColumn(String name, ColumnType type) {
 			int index = columns.size();
-			columns.add(new Column(name, type, index));
+			columns.add(new TableColumn(name, type, index));
 			return this;
 		}
 
@@ -87,7 +71,7 @@ public class Table {
 		
 	}
 	
-	public Table(String name, List<Column> columns) {
+	public Table(String name, List<TableColumn> columns) {
 		this.name = name;
 		this.columns = columns;
 		this.data = new TableData(columns.size());
@@ -172,8 +156,8 @@ public class Table {
 		return new Values(this);
 	}
 
-	public boolean has(Column c) {
-		return columns.contains(c);
+	public boolean has(Column column) {
+		return columns.stream().anyMatch(c -> column.need(c));
 	}
 
 }

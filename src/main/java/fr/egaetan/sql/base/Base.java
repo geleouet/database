@@ -1,7 +1,6 @@
-package fr.egaetan.sql;
+package fr.egaetan.sql.base;
 
-import fr.egaetan.sql.Table.Column;
-import fr.egaetan.sql.Table.TableBuilder;
+import fr.egaetan.sql.base.Table.TableBuilder;
 
 public class Base {
 

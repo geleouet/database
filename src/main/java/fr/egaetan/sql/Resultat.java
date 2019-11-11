@@ -3,8 +3,9 @@ package fr.egaetan.sql;
 import java.util.ArrayList;
 import java.util.List;
 
-import fr.egaetan.sql.Table.Column;
-import fr.egaetan.sql.Table.ColumnType;
+import fr.egaetan.sql.base.Column;
+import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.base.TableColumn;
 
 public class Resultat {
 
@@ -54,11 +55,11 @@ public class Resultat {
 		List<ResultatRow> rows = new ArrayList<>();
 		List<ResultatColumn> columns = new ArrayList<>();
 
-		public ResultatBuilder(List<Column> columns) {
+		public ResultatBuilder(List<? extends Column> columns) {
 			this.columns = new ArrayList<>(columns.size());
 			for (int i = 0; i < columns.size(); i++) {
 				Column from = columns.get(i);
-				this.columns.add(new ResultatColumn(from.name, from.type, i));
+				this.columns.add(new ResultatColumn(from.name(), from.type(), i));
 			}
 		}
 
@@ -72,7 +73,7 @@ public class Resultat {
 
 	}
 
-	public static ResultatBuilder create(List<Column> columns) {
+	public static ResultatBuilder create(List<? extends Column> columns) {
 		return new ResultatBuilder(columns);
 	}
 

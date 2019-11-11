@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import fr.egaetan.sql.Table.Column;
-import fr.egaetan.sql.Table.TableDataRow;
+import fr.egaetan.sql.base.Column;
+import fr.egaetan.sql.base.Table;
+import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.base.Table.TableDataRow;
 
 public class Query {
 
@@ -142,6 +145,62 @@ public class Query {
 
 	public QuerySelect select(Column ...columns) {
 		return new QuerySelect(columns);
+	}
+	
+	public static interface EntierFunction {
+		Integer apply(Integer i);
+	}
+	public static interface StringFunction {
+		String apply(String i);
+	}
+
+	public static Column compound(Column column, String name, EntierFunction object) {
+		return new Column() {
+			
+			@Override
+			public boolean need(Column c) {
+				return column.need(c);
+			}
+			
+			@Override
+			public ColumnType type() {
+				return ColumnType.ENTIER;
+			}
+			
+			@Override
+			public Object readFrom(TableDataRow row) {
+				return object.apply((Integer) column.readFrom(row));
+			}
+			
+			@Override
+			public String name() {
+				return name;
+			}
+		};
+	}
+	public static Column compound(Column column, String name, StringFunction object) {
+		return new Column() {
+			
+			@Override
+			public boolean need(Column c) {
+				return column.need(c);
+			}
+			
+			@Override
+			public ColumnType type() {
+				return ColumnType.STRING;
+			}
+			
+			@Override
+			public Object readFrom(TableDataRow row) {
+				return object.apply((String) column.readFrom(row));
+			}
+			
+			@Override
+			public String name() {
+				return name;
+			}
+		};
 	}
 
 }
