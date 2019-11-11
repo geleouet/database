@@ -14,8 +14,10 @@ public class PrenomListe {
 	
 	private static class Prenom {
 		String prenom;
+		@SuppressWarnings("unused")
 		String sex;
 		String language;
+		@SuppressWarnings("unused")
 		String freq;
 
 		public Prenom(String prenom, String sex, String language, String freq) {

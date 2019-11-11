@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import fr.egaetan.sql.Resultat.ResultatBuilder;
-import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.Column.ColumnQualifiedName;
+import fr.egaetan.sql.common.DataRow;
 import fr.egaetan.sql.exception.ColumnDoesntExist;
 import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
-import fr.egaetan.sql.common.DataRow;
 
 public class Query {
 
@@ -44,7 +44,7 @@ public class Query {
 			this.value = value;
 		}
 
-		public List<RowPredicate> predicates(Table table) {
+		public List<RowPredicate> predicates(TableSelect table) {
 			if (table.has(column)) {
 				return List.of(new RowPredicate(column, value));
 			}
@@ -93,12 +93,12 @@ public class Query {
 
 	public static class QueryFrom {
 		
-		private List<Table> tables;
+		private List<TableSelect> tables;
 		private QuerySelect querySelect;
 		private List<QueryPredicate> queryPredicates;
 		private List<QueryPredicateJoin> queryJoinPredicates;
 
-		public QueryFrom(QuerySelect querySelect, Table ... tables) {
+		public QueryFrom(QuerySelect querySelect, TableSelect ... tables) {
 			this.tables = new ArrayList<>(Arrays.asList(tables));
 			this.querySelect = querySelect;
 			this.queryPredicates = new ArrayList<>();
@@ -120,7 +120,7 @@ public class Query {
 			
 			for (int i = 0; i < tables.size(); i++) {
 				
-				Table table = tables.get(i);
+				TableSelect table = tables.get(i);
 				List<RowPredicate> predicates = new ArrayList<>();
 				
 				for (QueryPredicate queryPredicate : queryPredicates) {
@@ -216,12 +216,12 @@ public class Query {
 			return where(column);
 		}
 
-		public QueryJoin innerJoin(Table table) {
-			if (tables.stream().anyMatch(t -> t.name().equalsIgnoreCase(table.name()))) {
-				throw new TableNameSpecifiedMoreThanOnce(table.name());
+		public QueryJoin innerJoin(TableSelect tableSelect) {
+			if (tables.stream().anyMatch(t -> t.name().equalsIgnoreCase(tableSelect.name()))) {
+				throw new TableNameSpecifiedMoreThanOnce(tableSelect.name());
 			}
 			
-			return new QueryJoin(this, table);
+			return new QueryJoin(this, tableSelect);
 		}
 		
 	}
@@ -269,10 +269,10 @@ public class Query {
 	public static class QueryJoinOn {
 
 		private QueryFrom queryFrom;
-		private Table table;
+		private TableSelect table;
 		private Column column;
 
-		public QueryJoinOn(QueryFrom queryFrom, Table table, Column column) {
+		public QueryJoinOn(QueryFrom queryFrom, TableSelect table, Column column) {
 			this.queryFrom = queryFrom;
 			this.table = table;
 			this.column = column;
@@ -288,9 +288,9 @@ public class Query {
 	public static class QueryJoin {
 
 		private QueryFrom queryFrom;
-		private Table table;
+		private TableSelect table;
 
-		public QueryJoin(QueryFrom queryFrom, Table table) {
+		public QueryJoin(QueryFrom queryFrom, TableSelect table) {
 			this.queryFrom = queryFrom;
 			this.table = table;
 			
@@ -310,11 +310,11 @@ public class Query {
 			this.columns = columns;
 		}
 		
-		public List<Column> columns(Table table) {
+		public List<Column> columns(TableSelect table) {
 			return Arrays.stream(columns).filter(c -> table.has(c)).collect(Collectors.toList());
 		}
 
-		public QueryFrom from(Table ... tables) {
+		public QueryFrom from(TableSelect ... tables) {
 			return new QueryFrom(this, tables);
 		}
 

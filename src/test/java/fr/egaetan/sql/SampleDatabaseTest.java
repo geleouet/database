@@ -11,8 +11,6 @@ import fr.egaetan.sql.base.Table.ColumnType;
 
 public class SampleDatabaseTest {
 
-	
-	
 	@Test
 	public void show_some_performance_issues() {
 		// GIVEN

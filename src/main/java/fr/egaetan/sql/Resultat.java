@@ -71,7 +71,7 @@ public class Resultat {
 		private long startTime;
 
 		public ResultatBuilder(List<? extends Column> columns) {
-			this.startTime = System.currentTimeMillis();
+			this.startTime = System.nanoTime();
 			this.columns = new ArrayList<>(columns.size());
 			for (int i = 0; i < columns.size(); i++) {
 				Column from = columns.get(i);
@@ -80,7 +80,7 @@ public class Resultat {
 		}
 
 		public Resultat build() {
-			return new Resultat(rows, columns, System.currentTimeMillis() - startTime);
+			return new Resultat(rows, columns, (System.nanoTime() - startTime) / 1_000_000);
 		}
 
 		public void addRow(Object[] data) {

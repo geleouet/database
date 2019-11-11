@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import fr.egaetan.sql.base.Base;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
 
 public class JoinDatabaseShould {
@@ -17,7 +18,7 @@ public class JoinDatabaseShould {
 		// GIVEN
 		Base base = Base.create();
 		Table tableClient = createTableClient(base);
-		Table tableColor = createTableColor(base);
+		TableSelect tableColor = createTableColor(base);
 		
 		// WHEN
 		Resultat res = new Query().select(tableClient.column("id"), tableClient.column("value"), tableColor.column("color"))
@@ -163,6 +164,49 @@ public class JoinDatabaseShould {
 			.innerJoin(tableColor).on(tableClient.column("id")).isEqualTo(tableColor.column("id"))
 			.execute()
 		);
+	}
+	
+	
+	@Test
+	//select relation.name, parent.name as parent_name
+	//from relation inner join relation parent on relation.parent = parent.id;
+	public void inner_join_on_same_table() {
+		// GIVEN
+		Base base = Base.create();
+		Table tableRelation = createTableRelation(base);
+		
+		// WHEN
+		TableSelect tableRelationAliasParent = tableRelation.alias("parent");
+		Resultat res = new Query().select(tableRelation.column("name"), tableRelationAliasParent.column("name").as("parent_name"))
+				.from(tableRelation)
+				.innerJoin(tableRelationAliasParent).on(tableRelation.column("parent")).isEqualTo(tableRelationAliasParent.column("id"))
+				.execute();
+		
+		System.out.println(res);
+		// THEN
+		Assertions.assertThat(res.size()).isEqualTo(2);
+		Assertions.assertThat(res.columns().size()).isEqualTo(2);
+		Assertions.assertThat(res.columns().get(0).displayName()).isEqualTo("name");
+		Assertions.assertThat(res.columns().get(1).displayName()).isEqualTo("parent_name");
+		Assertions.assertThat(res.columns().get(0).type()).isEqualTo(ColumnType.STRING);
+		Assertions.assertThat(res.columns().get(1).type()).isEqualTo(ColumnType.STRING);
+		Assertions.assertThat(res.rowAt(0).value("name")).isEqualTo("Alice");
+		Assertions.assertThat(res.rowAt(0).value("parent_name")).isEqualTo("Bob");
+		Assertions.assertThat(res.rowAt(1).value("name")).isEqualTo("John");
+		Assertions.assertThat(res.rowAt(1).value("parent_name")).isEqualTo("Alice");
+	}
+	
+	private Table createTableRelation(Base base) {
+		Table tableColor = base
+				.createTable("relation")
+				.addColumn("id", ColumnType.ENTIER)
+				.addColumn("parent", ColumnType.ENTIER)
+				.addColumn("name", ColumnType.STRING)
+				.build();
+		tableColor.insert(tableColor.values().set("id", 1).set("parent", 0).set("name", "Bob"));
+		tableColor.insert(tableColor.values().set("id", 2).set("parent", 1).set("name", "Alice"));
+		tableColor.insert(tableColor.values().set("id", 3).set("parent", 2).set("name", "John"));
+		return tableColor;
 	}
 	
 	private Table createTableColor(Base base) {

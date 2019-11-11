@@ -1,8 +1,6 @@
 package fr.egaetan.sql.base;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import fr.egaetan.sql.Query.RowPredicate;
@@ -12,17 +10,34 @@ import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.DataRow;
 import fr.egaetan.sql.exception.ColumnDoesntExist;
 
-public class Table {
+public class Table implements TableSelect {
 
 	private String name;
 	private List<TableColumn> columns;
 	private TableData data;
 
-	public static enum ColumnType {
-		ENTIER, 
-		STRING,
-		;
+	public static class ColumnType {
+		
+		public final static ColumnType ENTIER = new ColumnType(ColumnTypeGroup.ENTIER, 10); 
+		public final static ColumnType STRING = new ColumnType(ColumnTypeGroup.STRING, 16); 
+		
+		public static enum ColumnTypeGroup {
+			ENTIER, 
+			STRING,
+			;
+		}
+		
+		ColumnTypeGroup group;
+		int size;
+		
+		public ColumnType(ColumnTypeGroup group, int size) {
+			super();
+			this.group = group;
+			this.size = size;
+		}
+		
 	}
+	
 	
 	public static class TableDataRow implements DataRow {
 		private final Object[] data;
@@ -84,10 +99,7 @@ public class Table {
 		this.data = new TableData(columns.size());
 	}
 
-	public Resultat select(Column... resultColumns) {
-		return select(Arrays.asList(resultColumns), Collections.emptyList());
-	}
-	
+	@Override
 	public Resultat select(List<Column> resultColumns, List<RowPredicate> predicates) {
 		ResultatBuilder resultat = Resultat.create(resultColumns);
 		int nbResultColumns = resultColumns.size();
@@ -134,9 +146,9 @@ public class Table {
 	
 	public static class Values {
 		List<ColumnValue> values = new ArrayList<>();
-		Table from;
+		TableSelect from;
 
-		public Values(Table table) {
+		public Values(TableSelect table) {
 			from = table;
 		}
 
@@ -155,9 +167,9 @@ public class Table {
 		data.insert(values);
 	}
 
+	@Override
 	public Column column(String string) {
 		return columns.stream().filter(c -> c.name.equalsIgnoreCase(string))
-				
 				.findFirst()
 				.orElseThrow(() -> new ColumnDoesntExist(string));
 	}
@@ -178,5 +190,54 @@ public class Table {
 	
 	public String name() {
 		return name;
+	}
+
+	public TableSelect alias(String string) {
+		TableSelect origine = this;
+		return new TableSelect() {
+			
+			@Override
+			public Resultat select(List<Column> resultColumns, List<RowPredicate> predicates) {
+				return origine.select(resultColumns, predicates);
+			}
+			
+			@Override
+			public Column column(String string) {
+				Column column = origine.column(string);
+				return new Column() {
+
+					@Override
+					public Object readFrom(DataRow row) {
+						return column.readFrom(row);
+					}
+
+					@Override
+					public String qualifiedName() {
+						return string + "." + displayName();
+					}
+					
+					@Override
+					public String displayName() {
+						return column.displayName();
+					}
+
+					@Override
+					public ColumnType type() {
+						return column.type();
+					}
+					
+				};
+			}
+
+			@Override
+			public boolean has(Column column) {
+				return column(column.qualifiedName().split("\\.")[1]).qualified().identify(column.qualified());
+			}
+
+			@Override
+			public String name() {
+				return string;
+			}
+		};
 	}
 }
