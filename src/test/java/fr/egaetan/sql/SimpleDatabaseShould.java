@@ -1,6 +1,7 @@
 package fr.egaetan.sql;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import fr.egaetan.sql.base.Base;
@@ -57,6 +58,7 @@ public class SimpleDatabaseShould {
 	}
 	
 	@Test
+	@Disabled
 	// select value + 10 as plus10 from client;
 	public void select_entier_formula() {
 		// GIVEN
@@ -81,7 +83,9 @@ public class SimpleDatabaseShould {
 		Assertions.assertThat(res.rowAt(0).value("plus10")).isEqualTo(12);
 		
 	}
+
 	@Test
+	@Disabled
 	public void select_string_formula() {
 		// GIVEN
 		Base base = Base.create();
@@ -179,6 +183,7 @@ public class SimpleDatabaseShould {
 				.from(table)
 				.where(table.column("id")).isEqualTo(2)
 				.execute();
+		System.out.println(res);
 		
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);

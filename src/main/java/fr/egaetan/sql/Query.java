@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import fr.egaetan.sql.Resultat.ResultatBuilder;
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.common.Column;
@@ -17,12 +16,18 @@ import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
 
 public class Query {
 
-	public static class RowPredicate {
+	public static interface RowPredicate {
+		
+		public boolean valid(DataRow row);
+		
+		
+	}
+	public static class EqualsPredicate implements RowPredicate {
 
 		private Column column;
 		private Object value;
 
-		public RowPredicate(Column column, Object value) {
+		public EqualsPredicate(Column column, Object value) {
 			this.column = column;
 			this.value = value;
 		}
@@ -32,6 +37,12 @@ public class Query {
 			return value.equals(data);
 		}
 
+		
+		@Override
+		public String toString() {
+			return "Filter: ("+column.displayName()+ " = " + value.toString()+")";
+		}
+		
 	}
 
 	public static class QueryPredicate {
@@ -46,32 +57,12 @@ public class Query {
 
 		public List<RowPredicate> predicates(TableSelect table) {
 			if (table.has(column)) {
-				return List.of(new RowPredicate(column, value));
+				return List.of(new EqualsPredicate(column, value));
 			}
 			return Collections.emptyList();
 		}
 
 	}
-
-//	public static class QueryRunnable {
-//
-//		private QueryFrom queryFrom;
-//		private QueryPredicate queryPredicate;
-//
-//		public QueryRunnable(QueryFrom queryFrom, QueryPredicate queryPredicate) {
-//			this.queryFrom = queryFrom;
-//			this.queryPredicate = queryPredicate;
-//		}
-//
-//		public Resultat execute() {
-//			QuerySelect select = queryFrom.querySelect;
-//			Table table = queryFrom.table;
-//			
-//			Resultat resultat = table.select(select.columns(table), queryPredicate.predicates(table));
-//			return resultat;
-//		}
-//
-//	}
 
 	public static class QueryWhere {
 
@@ -114,102 +105,8 @@ public class Query {
 		}
 
 		public Resultat execute() {
-			QuerySelect select = querySelect;
-			ResultatBuilder builder = new ResultatBuilder(Arrays.asList(select.columns));
-			List<Resultat> resultats = new ArrayList<>();
-			
-			for (int i = 0; i < tables.size(); i++) {
-				
-				TableSelect table = tables.get(i);
-				List<RowPredicate> predicates = new ArrayList<>();
-				
-				for (QueryPredicate queryPredicate : queryPredicates) {
-					predicates.addAll(queryPredicate.predicates(table));
-				}
-				
-				List<Column> columns = select.columns(table);
-				for (QueryPredicateJoin q : queryJoinPredicates) {
-					if (table.has(q.a) && columns.stream().noneMatch(c -> c.qualified().identify(q.a.qualified()))) {
-						columns.add(q.a);
-					}
-					if (table.has(q.b) && columns.stream().noneMatch(c -> c.qualified().identify(q.b.qualified()))) {
-						columns.add(q.b);
-					}
-				}
-				
-				
-				Resultat resultat = table.select(columns, predicates);
-				resultats.add(resultat);
-			}
-			
-			List<Integer> current = initCartesianProductIndex(resultats);
-			
-			boolean finished = false;
-			while (!finished) {
-				Object[] row = new Object[select.columns.length];
-				for (int i = 0; i < select.columns.length; i++) {
-					ColumnQualifiedName columnQualified = select.columns[i].qualified();
-					
-					for (int j = 0; j < resultats.size(); j++) {
-						Resultat res = resultats.get(j);
-						if (res.columns().stream().anyMatch(r -> columnQualified.identify(r.qualified()))) {
-							Object value = res.rowAt(current.get(j)).value(columnQualified);
-							row[i] = value;
-							break;
-						}
-					}
-					
-				}
-
-				boolean allChecked = true;
-				for (QueryPredicateJoin q : queryJoinPredicates) {
-					ColumnQualifiedName joinA = q.a.qualified();
-					ColumnQualifiedName joinB = q.b.qualified();
-					Object a = null;
-					Object b = null;
-					for (int j = 0; j < resultats.size(); j++) {
-						Resultat res = resultats.get(j);
-						if (res.columns().stream().anyMatch(r -> joinA.identify(r.qualified()))) {
-							Object value = res.rowAt(current.get(j)).value(joinA);
-							a = value;
-						}
-						if (res.columns().stream().anyMatch(r -> joinB.identify(r.qualified()))) {
-							Object value = res.rowAt(current.get(j)).value(joinB);
-							b = value;
-						}
-					}
-					allChecked = allChecked && q.predicate.check(a, b);
-				}
-				
-				if (allChecked) {
-					builder.addRow(row);
-				}
-				
-				
-				finished = true;
-				for (int i = 0; i < current.size(); i++) {
-					if (current.get(i) + 1 < resultats.get(i).size()) {
-						current.set(i, current.get(i) + 1);
-						finished = false;
-						break;
-					}
-					else {
-						current.set(i, 0);
-					}
-				}
-			}
-			
-			
-			
-			return builder.build();
-		}
-
-		private List<Integer> initCartesianProductIndex(List<Resultat> resultats) {
-			List<Integer> current = new ArrayList<>();
-			for (int i = 0; i < resultats.size(); i++) {
-				current.add(0);
-			}
-			return current;
+			QueryExecutor queryExecutor = new QueryExecutor(tables, querySelect, queryPredicates, queryJoinPredicates);
+			return queryExecutor.execute();
 		}
 
 		public QueryWhere and(Column column) {
@@ -316,6 +213,10 @@ public class Query {
 
 		public QueryFrom from(TableSelect ... tables) {
 			return new QueryFrom(this, tables);
+		}
+
+		public List<Column> columns() {
+			return Arrays.asList(this.columns);
 		}
 
 	}

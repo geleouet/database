@@ -149,6 +149,29 @@ public class JoinDatabaseShould {
 	}
 
 	@Test
+	public void inner_join_three_table() {
+		// GIVEN
+		Base base = Base.create();
+		Table tableClient = createTableClient(base);
+		Table tableCity = createTableCity(base);
+		Table tableColor = createTableColor(base);
+		
+		// WHEN
+		Resultat res = new Query().select(tableClient.column("id"), tableClient.column("value"), tableColor.column("color"), tableCity.column("name").as("city"))
+				.from(tableClient)
+				.innerJoin(tableColor).on(tableClient.column("id")).isEqualTo(tableColor.column("id"))
+				.innerJoin(tableCity).on(tableClient.column("id")).isEqualTo(tableCity.column("id"))
+				.execute();
+		// THEN
+		Assertions.assertThat(res.size()).isEqualTo(5);
+		Assertions.assertThat(res.columns().size()).isEqualTo(4);
+		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("John");
+		Assertions.assertThat(res.rowAt(0).value("id")).isEqualTo(1);
+		Assertions.assertThat(res.rowAt(0).value("color")).isEqualTo("Blue");
+		Assertions.assertThat(res.rowAt(0).value("city")).isEqualTo("London");
+	}
+
+	@Test
 	public void not_specified_twice_the_same_table() {
 		// GIVEN
 		Base base = Base.create();
@@ -217,6 +240,17 @@ public class JoinDatabaseShould {
 				.build();
 		tableColor.insert(tableColor.values().set("id", 1).set("color", "Blue"));
 		tableColor.insert(tableColor.values().set("id", 2).set("color", "Red"));
+		return tableColor;
+	}
+
+	private Table createTableCity(Base base) {
+		Table tableColor = base
+				.createTable("city")
+				.addColumn("id", ColumnType.ENTIER)
+				.addColumn("name", ColumnType.STRING)
+				.build();
+		tableColor.insert(tableColor.values().set("id", 1).set("name", "London"));
+		tableColor.insert(tableColor.values().set("id", 2).set("name", "Paris"));
 		return tableColor;
 	}
 

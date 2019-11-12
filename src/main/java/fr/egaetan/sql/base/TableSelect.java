@@ -3,10 +3,12 @@ package fr.egaetan.sql.base;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import fr.egaetan.sql.Resultat;
 import fr.egaetan.sql.Query.RowPredicate;
 import fr.egaetan.sql.common.Column;
+import fr.egaetan.sql.common.DataRow;
 
 public interface TableSelect {
 
@@ -22,4 +24,7 @@ public interface TableSelect {
 
 	String name();
 
+	Stream<? extends DataRow> datas();
+	
+	List<? extends Column> columns();
 }

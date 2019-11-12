@@ -2,6 +2,8 @@ package fr.egaetan.sql.base;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import fr.egaetan.sql.Query.RowPredicate;
 import fr.egaetan.sql.Resultat;
@@ -113,6 +115,14 @@ public class Table implements TableSelect {
 			}
 		}
 		return resultat.build();
+	}
+	
+	public List<? extends Column> columns() {
+		return columns;
+	}
+	
+	public Stream<? extends DataRow> datas() {
+		return data.rows.stream();
 	}
 
 	public static class Value {
@@ -237,6 +247,16 @@ public class Table implements TableSelect {
 			@Override
 			public String name() {
 				return string;
+			}
+
+			@Override
+			public Stream<? extends DataRow> datas() {
+				return origine.datas();
+			}
+
+			@Override
+			public List<? extends Column> columns() {
+				return origine.columns().stream().map(c -> column(c.displayName())).collect(Collectors.toList());
 			}
 		};
 	}
