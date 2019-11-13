@@ -15,6 +15,7 @@ import fr.egaetan.sql.Resultat.ResultatRow;
 import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.DataRow;
+import fr.egaetan.sql.exception.ColumnDoesntExist;
 
 public class QueryExecutor {
 
@@ -52,9 +53,21 @@ public class QueryExecutor {
 			this.predicates = predicates;
 		}
 
+		public NestedLoopFilter buildFilter(RowPredicate filter) {
+			for (int j = 0; j < columns().size(); j++) {
+				if (columns().get(j).qualified().identify(filter.reference().qualified())) {
+					int j$  =j;
+					return row -> filter.valid(row.data()[j$]);
+				}
+			}
+			throw new ColumnDoesntExist(filter.reference().displayName());
+		}
+		
 		@Override
 		public Stream<? extends DataRow> execute() {
-			return table.datas().filter(row -> predicates.stream().allMatch(p -> p.valid(row)));
+			List<NestedLoopFilter> filters = predicates.stream().map(this::buildFilter).collect(Collectors.toList());
+			
+			return table.datas().filter(row -> filters.stream().allMatch(p -> p.accept(row)));
 		}
 		
 		@Override

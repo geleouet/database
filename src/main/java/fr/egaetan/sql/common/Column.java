@@ -31,10 +31,6 @@ public interface Column {
 		return datas[0];
 	}
 	
-	
-	
-	Object readFrom(DataRow row);
-
 	String displayName();
 
 	default ColumnQualifiedName qualified() {
@@ -54,11 +50,6 @@ public interface Column {
 	default Column as(String displayName) {
 		Column origin = this;
 		return new Column() {
-
-			@Override
-			public Object readFrom(DataRow row) {
-				return origin.readFrom(row);
-			}
 
 			@Override
 			public String displayName() {

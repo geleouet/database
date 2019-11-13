@@ -193,11 +193,6 @@ public class Table implements TableSelect {
 				return new Column() {
 
 					@Override
-					public Object readFrom(DataRow row) {
-						return column.readFrom(row);
-					}
-
-					@Override
 					public String qualifiedName() {
 						return string + "." + displayName();
 					}

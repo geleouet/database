@@ -6,27 +6,24 @@ import java.util.OptionalInt;
 
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.common.Column;
-import fr.egaetan.sql.common.Column.ColumnQualifiedName;
 import fr.egaetan.sql.common.DataRow;
+import fr.egaetan.sql.exception.ColumnDoesntExist;
 
 public class Resultat {
 
 	
 	private long timeSpent;
 
-
 	public static class ResultatColumn implements Column {
 
 		private String name;
 		private ColumnType type;
-		private int index;
 		private String qualifiedName;
 
-		public ResultatColumn(String name, String qualifiedName, ColumnType type, int index) {
+		public ResultatColumn(String name, String qualifiedName, ColumnType type) {
 			this.name = name;
 			this.qualifiedName = qualifiedName;
 			this.type = type;
-			this.index = index;
 		}
 
 		@Override
@@ -42,11 +39,6 @@ public class Resultat {
 			return type;
 		}
 
-		@Override
-		public Object readFrom(DataRow row) {
-			return row.data()[index];
-		}
-		
 	}
 	
 	public static class ResultatRow implements DataRow {
@@ -75,7 +67,7 @@ public class Resultat {
 			this.columns = new ArrayList<>(columns.size());
 			for (int i = 0; i < columns.size(); i++) {
 				Column from = columns.get(i);
-				this.columns.add(new ResultatColumn(from.displayName(), from.qualifiedName(), from.type(), i));
+				this.columns.add(new ResultatColumn(from.displayName(), from.qualifiedName(), from.type()));
 			}
 		}
 
@@ -124,16 +116,17 @@ public class Resultat {
 			this.from = from;
 		}
 
-		public Object value(String string) {
-			ResultatColumn column = from.columns.stream().filter(c -> c.name.equalsIgnoreCase(string)).findFirst().get();
-			return column.readFrom(row);
+		public Object value(String columnName) {
+			List<ResultatColumn> columns = from.columns;
+			for (int i = 0; i < columns.size(); i++) {
+				ResultatColumn column = columns.get(i);
+				if (column.displayName().equals(columnName)) {
+					return row.values[i];
+				}
+			}
+			throw new ColumnDoesntExist(columnName);
 		}
 
-		public Object value(ColumnQualifiedName columnQualified) {
-			ResultatColumn column = from.columns.stream().filter(c -> columnQualified.identify(c.qualified())).findFirst().get();
-			return column.readFrom(row);
-		}
-		
 	}
 	
 	public ResultatLine rowAt(int i) {

@@ -10,7 +10,6 @@ import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.Column.ColumnQualifiedName;
-import fr.egaetan.sql.common.DataRow;
 import fr.egaetan.sql.exception.ColumnDoesntExist;
 import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
 
@@ -18,7 +17,9 @@ public class Query {
 
 	public static interface RowPredicate {
 		
-		public boolean valid(DataRow row);
+		public Column reference();
+
+		public boolean valid(Object object);
 		
 		
 	}
@@ -32,8 +33,8 @@ public class Query {
 			this.value = value;
 		}
 
-		public boolean valid(DataRow row) {
-			Object data = column.readFrom(row);
+		@Override
+		public boolean valid(Object data) {
 			return value.equals(data);
 		}
 
@@ -41,6 +42,11 @@ public class Query {
 		@Override
 		public String toString() {
 			return "Filter: ("+column.displayName()+ " = " + value.toString()+")";
+		}
+
+		@Override
+		public Column reference() {
+			return column;
 		}
 		
 	}
@@ -246,11 +252,6 @@ public class Query {
 			}
 			
 			@Override
-			public Object readFrom(DataRow row) {
-				return object.apply((Integer) column.readFrom(row));
-			}
-			
-			@Override
 			public String displayName() {
 				return name;
 			}
@@ -277,11 +278,6 @@ public class Query {
 			@Override
 			public ColumnType type() {
 				return ColumnType.STRING;
-			}
-			
-			@Override
-			public Object readFrom(DataRow row) {
-				return object.apply((String) column.readFrom(row));
 			}
 			
 			@Override
