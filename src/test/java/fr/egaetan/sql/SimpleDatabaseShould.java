@@ -58,7 +58,6 @@ public class SimpleDatabaseShould {
 	}
 	
 	@Test
-	@Disabled
 	// select value + 10 as plus10 from client;
 	public void select_entier_formula() {
 		// GIVEN
@@ -85,7 +84,6 @@ public class SimpleDatabaseShould {
 	}
 
 	@Test
-	@Disabled
 	public void select_string_formula() {
 		// GIVEN
 		Base base = Base.create();

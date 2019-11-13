@@ -254,6 +254,16 @@ public class Query {
 			public String displayName() {
 				return name;
 			}
+			
+			@Override
+			public Column[] references() {
+				return new Column[] {column};
+			}
+			
+			@Override
+			public Object read(Object[] datas) {
+				return object.apply((Integer) datas[0]);
+			}
 		};
 	}
 	public static Column compound(Column column, String name, StringFunction object) {
@@ -277,6 +287,16 @@ public class Query {
 			@Override
 			public String displayName() {
 				return name;
+			}
+			
+			@Override
+			public Column[] references() {
+				return new Column[] {column};
+			}
+			
+			@Override
+			public Object read(Object[] datas) {
+				return object.apply((String) datas[0]);
 			}
 		};
 	}

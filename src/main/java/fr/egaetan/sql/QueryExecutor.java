@@ -147,7 +147,7 @@ public class QueryExecutor {
 			return indent + "Nested Loop" + "\n"
 						+ filters.stream().map(j -> j.explain(indent + "  ")).collect(Collectors.joining("\n")) + (filters.size() > 0 ? "\n" : "")
 						+ first.explain(indent + "  ") + "\n"
-						+ snd.explain(indent + "  ") + "\n"
+						+ snd.explain(indent + "  ")
 						;
 		}
 		
@@ -163,21 +163,36 @@ public class QueryExecutor {
 		}
 
 		public static RowBuilder build(Children scan, List<Column> columns) {
-			int[] mapper = new int[columns.size()];
+			int[][] mappers = new int[columns.size()][];
+			
 			for (int i = 0; i < columns.size(); i++) {
-				Column c = columns.get(i);
-				for (int j = 0; j < scan.columns().size(); j++) {
-					if (scan.columns().get(j).qualified().identify(c.qualified())) {
-						mapper[i] = j;
+				Column columnResultat = columns.get(i);
+				Column[] references = columnResultat.references();
+				
+				mappers[i] = new int[references.length];
+				
+				for (int k = 0; k < references.length; k++) {
+					Column c = references[k];
+					
+					for (int j = 0; j < scan.columns().size(); j++) {
+						if (scan.columns().get(j).qualified().identify(c.qualified())) {
+							mappers[i][k] = j;
+							break;
+						}
 					}
 				}
-				
 			}
 			
 			RowBuilder rowBuilder = new RowBuilder(d ->  {
+				Object[] source = d.data();
 				Object[] data = new Object[columns.size()];
 				for (int i = 0; i < columns.size(); i++) {
-					data[i] = d.data()[mapper[i]];
+					Column column = columns.get(i);
+					Object[] tmp = new Object[column.references().length];
+					for (int j = 0; j < tmp.length; j++) {
+						tmp[j] = source[mappers[i][j]];
+					}
+					data[i] = column.read(tmp);
 				}
 				return new ResultatRow(data);
 			});

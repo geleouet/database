@@ -15,8 +15,23 @@ public interface Column {
 		public boolean identify(ColumnQualifiedName qualified) {
 			return name.equalsIgnoreCase(qualified.name);
 		}
-		
+		@Override
+		public String toString() {
+			return name;
+		}
 	}
+	
+	
+	public default Column[] references() {
+		return new Column[] {this};
+	}
+	
+	
+	public default Object read(Object[] datas) {
+		return datas[0];
+	}
+	
+	
 	
 	Object readFrom(DataRow row);
 
