@@ -1,7 +1,6 @@
 package fr.egaetan.sql;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import fr.egaetan.sql.base.Base;
@@ -22,7 +21,7 @@ public class SimpleDatabaseShould {
 		table.insert(table.values().set("id", 1).set("value", 2));
 		
 		// WHEN
-		Resultat res = table.select(table.column("value"));
+		Resultat res = new Query().select(table.column("value")) .from(table).execute();
 		
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(1);
@@ -45,7 +44,7 @@ public class SimpleDatabaseShould {
 		table.insert(table.values().set("id", 2).set("value", "Jack"));
 		
 		// WHEN
-		Resultat res = table.select(table.column("value"));
+		Resultat res = new Query().select(table.column("value")) .from(table).execute();
 		
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(2);

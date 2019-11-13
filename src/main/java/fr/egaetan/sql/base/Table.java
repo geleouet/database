@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import fr.egaetan.sql.Query.RowPredicate;
-import fr.egaetan.sql.Resultat;
-import fr.egaetan.sql.Resultat.ResultatBuilder;
 import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.DataRow;
 import fr.egaetan.sql.exception.ColumnDoesntExist;
@@ -101,22 +98,6 @@ public class Table implements TableSelect {
 		this.data = new TableData(columns.size());
 	}
 
-	@Override
-	public Resultat select(List<Column> resultColumns, List<RowPredicate> predicates) {
-		ResultatBuilder resultat = Resultat.create(resultColumns);
-		int nbResultColumns = resultColumns.size();
-		for (DataRow row : data.rows) {
-			if (predicates.stream().allMatch(p -> p.valid(row))) {
-				Object[] resultRow = new Object[nbResultColumns];
-				for (int i = 0; i < nbResultColumns; i++) {
-					resultRow[i] = resultColumns.get(i).readFrom(row);
-				}
-				resultat.addRow(resultRow);
-			}
-		}
-		return resultat.build();
-	}
-	
 	public List<? extends Column> columns() {
 		return columns;
 	}
@@ -205,11 +186,6 @@ public class Table implements TableSelect {
 	public TableSelect alias(String string) {
 		TableSelect origine = this;
 		return new TableSelect() {
-			
-			@Override
-			public Resultat select(List<Column> resultColumns, List<RowPredicate> predicates) {
-				return origine.select(resultColumns, predicates);
-			}
 			
 			@Override
 			public Column column(String string) {
