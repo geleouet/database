@@ -10,6 +10,9 @@ import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
+import fr.egaetan.sql.executor.QueryExecutor.Explain;
+import fr.egaetan.sql.query.Query;
+import fr.egaetan.sql.result.Resultat;
 
 public class JoinDatabaseShould {
 
@@ -170,6 +173,69 @@ public class JoinDatabaseShould {
 		Assertions.assertThat(res.rowAt(0).value("color")).isEqualTo("Blue");
 		Assertions.assertThat(res.rowAt(0).value("city")).isEqualTo("London");
 	}
+	@Test
+	public void inner_join_three_table_with_where() {
+		// GIVEN
+		Base base = Base.create();
+		Table tableClient = createTableClient(base);
+		Table tableCity = createTableCity(base);
+		Table tableColor = createTableColor(base);
+		
+		// WHEN
+		Resultat res = new Query().select(tableClient.column("id"), tableClient.column("value"), tableColor.column("color"), tableCity.column("name").as("city"))
+				.from(tableClient)
+				.innerJoin(tableColor).on(tableClient.column("id")).isEqualTo(tableColor.column("id"))
+				.innerJoin(tableCity).on(tableClient.column("id")).isEqualTo(tableCity.column("id"))
+				.where(tableCity.column("id")).isEqualTo(1)
+				.execute();
+		// THEN
+		Assertions.assertThat(res.size()).isEqualTo(3);
+		Assertions.assertThat(res.columns().size()).isEqualTo(4);
+		Assertions.assertThat(res.rowAt(0).value("value")).isEqualTo("John");
+		Assertions.assertThat(res.rowAt(0).value("id")).isEqualTo(1);
+		Assertions.assertThat(res.rowAt(0).value("color")).isEqualTo("Blue");
+		Assertions.assertThat(res.rowAt(0).value("city")).isEqualTo("London");
+	}
+	@Test
+	public void explain_select() {
+		// GIVEN
+		Base base = Base.create();
+		Table tableClient = createTableClient(base);
+		Table tableCity = createTableCity(base);
+		Table tableColor = createTableColor(base);
+		
+		// WHEN
+		Explain res = new Query().select(tableClient.column("id"), tableClient.column("value"), tableColor.column("color"), tableCity.column("name").as("city"))
+				.from(tableClient)
+				.innerJoin(tableColor).on(tableClient.column("id")).isEqualTo(tableColor.column("id"))
+				.innerJoin(tableCity).on(tableClient.column("id")).isEqualTo(tableCity.column("id"))
+				.where(tableCity.column("id")).isEqualTo(1)
+				.explain()
+				.execute();
+		// THEN
+		Assertions.assertThat(res.toString()).isNotEmpty();
+	}
+
+	@Test
+	public void explain_analyse_select() {
+		// GIVEN
+		Base base = Base.create();
+		Table tableClient = createTableClient(base);
+		Table tableCity = createTableCity(base);
+		Table tableColor = createTableColor(base);
+		
+		// WHEN
+		Explain res = new Query().select(tableClient.column("id"), tableClient.column("value"), tableColor.column("color"), tableCity.column("name").as("city"))
+				.from(tableClient)
+				.innerJoin(tableColor).on(tableClient.column("id")).isEqualTo(tableColor.column("id"))
+				.innerJoin(tableCity).on(tableClient.column("id")).isEqualTo(tableCity.column("id"))
+				.where(tableCity.column("id")).isEqualTo(1)
+				.explain()
+				.analyse()
+				.execute();
+		// THEN
+		Assertions.assertThat(res.toString()).isNotEmpty();
+	}
 
 	@Test
 	public void not_specified_twice_the_same_table() {
@@ -205,7 +271,6 @@ public class JoinDatabaseShould {
 				.innerJoin(tableRelationAliasParent).on(tableRelation.column("parent")).isEqualTo(tableRelationAliasParent.column("id"))
 				.execute();
 		
-		System.out.println(res);
 		// THEN
 		Assertions.assertThat(res.size()).isEqualTo(2);
 		Assertions.assertThat(res.columns().size()).isEqualTo(2);

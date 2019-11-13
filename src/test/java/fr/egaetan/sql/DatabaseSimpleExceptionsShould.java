@@ -8,6 +8,7 @@ import fr.egaetan.sql.base.Base;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.exception.ColumnDoesntExist;
+import fr.egaetan.sql.query.Query;
 
 public class DatabaseSimpleExceptionsShould {
 	

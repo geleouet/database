@@ -1,4 +1,4 @@
-package fr.egaetan.sql;
+package fr.egaetan.sql.result;
 
 import java.util.ArrayList;
 import java.util.List;

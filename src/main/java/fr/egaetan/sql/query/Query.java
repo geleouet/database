@@ -1,4 +1,4 @@
-package fr.egaetan.sql;
+package fr.egaetan.sql.query;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,9 +9,10 @@ import java.util.stream.Collectors;
 import fr.egaetan.sql.base.Table.ColumnType;
 import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.common.Column;
-import fr.egaetan.sql.common.Column.ColumnQualifiedName;
-import fr.egaetan.sql.exception.ColumnDoesntExist;
 import fr.egaetan.sql.exception.TableNameSpecifiedMoreThanOnce;
+import fr.egaetan.sql.executor.QueryExecutor;
+import fr.egaetan.sql.executor.QueryExecutor.Explain;
+import fr.egaetan.sql.result.Resultat;
 
 public class Query {
 
@@ -41,7 +42,7 @@ public class Query {
 		
 		@Override
 		public String toString() {
-			return "Filter: ("+column.displayName()+ " = " + value.toString()+")";
+			return "Filter: ("+column.qualifiedName() + " = " + value.toString()+")";
 		}
 
 		@Override
@@ -110,10 +111,6 @@ public class Query {
 			return new QueryWhere(this, column);
 		}
 
-		public Resultat execute() {
-			QueryExecutor queryExecutor = new QueryExecutor(tables, querySelect, queryPredicates, queryJoinPredicates);
-			return queryExecutor.execute();
-		}
 
 		public QueryWhere and(Column column) {
 			return where(column);
@@ -126,45 +123,64 @@ public class Query {
 			
 			return new QueryJoin(this, tableSelect);
 		}
+
+		public Resultat execute() {
+			QueryExecutor queryExecutor = new QueryExecutor(tables, querySelect, queryPredicates, queryJoinPredicates);
+			return queryExecutor.execute();
+		}
+
+		public QueryExplain explain() {
+			return new QueryExplain(new QueryExecutor(tables, querySelect, queryPredicates, queryJoinPredicates));
+		}
 		
 	}
 	
-	public static interface PredicateJoin {
-		boolean check(Object a, Object b);
+	public static class QueryExplain {
+		private QueryExecutor queryExecutor;
+
+		public QueryExplain(QueryExecutor queryExecutor) {
+			this.queryExecutor = queryExecutor;
+		}
+
+		public Explain execute() {
+			return queryExecutor.explain();
+		}
+
+		public QueryExplainAnalyse analyse() {
+			return new QueryExplainAnalyse(queryExecutor);
+		}
+	}
+	public static class QueryExplainAnalyse {
+		private QueryExecutor queryExecutor;
+		
+		public QueryExplainAnalyse(QueryExecutor queryExecutor) {
+			this.queryExecutor = queryExecutor;
+		}
+		
+		public Explain execute() {
+			
+			return queryExecutor.explain();
+		}
+		
 	}
 	
+	
 	public static class QueryPredicateJoin {
-		Column a;
-		Column b;
-		PredicateJoin predicate;
+		private final Column a;
+		private final Column b;
 		
 		public QueryPredicateJoin(Column a, Column b, PredicateJoin predicate) {
 			super();
 			this.a = a;
 			this.b = b;
-			this.predicate = predicate;
 		}
 		
-		public boolean verify(Column[] columns, Object[] row) {
-			int aColonne = -1;
-			int bColonne = -1;
-			for (int i = 0; i < columns.length; i++) {
-				ColumnQualifiedName columnName = columns[i].qualified();
-				if (columnName.identify(a.qualified())) {
-					aColonne = i;
-				}
-				if (columnName.identify(b.qualified())) {
-					bColonne = i;
-				}
-			}
-			if (aColonne == -1) {
-				throw new ColumnDoesntExist(a.qualifiedName());
-			}
-			if (bColonne == -1) {
-				throw new ColumnDoesntExist(b.qualifiedName());
-			}
-			
-			return predicate.check(row[aColonne], row[bColonne]);
+		public Column getA() {
+			return a;
+		}
+
+		public Column getB() {
+			return b;
 		}
 		
 	}

@@ -81,8 +81,7 @@ public class Table implements TableSelect {
 		}
 
 		public TableBuilder addColumn(String name, ColumnType type) {
-			int index = columns.size();
-			columns.add(new TableColumn(name, this.name + "." + name, type, index));
+			columns.add(new TableColumn(name, this.name + "." + name, type));
 			return this;
 		}
 

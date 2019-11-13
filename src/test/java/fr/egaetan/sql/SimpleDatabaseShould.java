@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import fr.egaetan.sql.base.Base;
 import fr.egaetan.sql.base.Table;
 import fr.egaetan.sql.base.Table.ColumnType;
+import fr.egaetan.sql.query.Query;
+import fr.egaetan.sql.result.Resultat;
 
 public class SimpleDatabaseShould {
 	

@@ -1,21 +1,24 @@
-package fr.egaetan.sql;
+package fr.egaetan.sql.executor;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import fr.egaetan.sql.Query.QueryPredicate;
-import fr.egaetan.sql.Query.QueryPredicateJoin;
-import fr.egaetan.sql.Query.QuerySelect;
-import fr.egaetan.sql.Query.RowPredicate;
-import fr.egaetan.sql.Resultat.ResultatBuilder;
-import fr.egaetan.sql.Resultat.ResultatRow;
 import fr.egaetan.sql.base.TableSelect;
 import fr.egaetan.sql.common.Column;
 import fr.egaetan.sql.common.DataRow;
 import fr.egaetan.sql.exception.ColumnDoesntExist;
+import fr.egaetan.sql.query.Query.QueryPredicate;
+import fr.egaetan.sql.query.Query.QueryPredicateJoin;
+import fr.egaetan.sql.query.Query.QuerySelect;
+import fr.egaetan.sql.query.Query.RowPredicate;
+import fr.egaetan.sql.result.Resultat;
+import fr.egaetan.sql.result.Resultat.ResultatBuilder;
+import fr.egaetan.sql.result.Resultat.ResultatRow;
 
 public class QueryExecutor {
 
@@ -46,11 +49,14 @@ public class QueryExecutor {
 	public static class SeqScan implements Children {
 		TableSelect table;
 		private List<RowPredicate> predicates;
+		private List<NestedLoopFilter> filters;
+		private ExecutionReport report = new ExecutionReport();
 		
 		public SeqScan(TableSelect table, List<RowPredicate> predicates) {
 			super();
 			this.table = table;
 			this.predicates = predicates;
+			filters = predicates.stream().map(this::buildFilter).collect(Collectors.toList());
 		}
 
 		public NestedLoopFilter buildFilter(RowPredicate filter) {
@@ -65,9 +71,18 @@ public class QueryExecutor {
 		
 		@Override
 		public Stream<? extends DataRow> execute() {
-			List<NestedLoopFilter> filters = predicates.stream().map(this::buildFilter).collect(Collectors.toList());
-			
-			return table.datas().filter(row -> filters.stream().allMatch(p -> p.accept(row)));
+			report.execute();
+			Stream<? extends DataRow> resultat = table.datas().filter(this::filter).peek(__ -> report.count());
+			report.end();
+			return resultat;
+		}
+
+		private boolean filter(DataRow row) {
+			boolean allMatch = filters.stream().allMatch(p -> p.accept(row));
+			if (!allMatch) {
+				report.removed();
+			}
+			return allMatch;
 		}
 		
 		@Override
@@ -77,8 +92,10 @@ public class QueryExecutor {
 		
 		@Override
 		public String explain(String indent) {
-			return indent + "Seq Scan on " + table.name() 
-			+ predicates.stream().map(p -> indent +"  "+ p.toString()).collect(Collectors.joining("\n"));
+			String executionReport = report.explain(indent+ "    ");
+			return indent + "-> Seq Scan on " + table.name() + report.executionStatistics()
+			+ (predicates.size() > 0 ? "\n" + predicates.stream().map(p -> indent +"    "+ p.toString()).collect(Collectors.joining("\n")) : "")
+			+ (predicates.size() > 0 ? (executionReport.isEmpty() ? "" : ("\n" + executionReport)) : "");
 		}
 	}
 	
@@ -105,12 +122,59 @@ public class QueryExecutor {
 		boolean accept(DataRow data);
 	}
 	
+	
+	public static class ExecutionReport {
+		private int rowRemovedByFilter = 0;
+		private int loop = 0;
+		private int rows = 0;
+		private long time = 0;
+		private long start;
+		
+		public void count() {
+			rows++;
+		}
+		
+		public void removed() {
+			rowRemovedByFilter++;
+		}
+		
+		public void execute() {
+			loop++;
+			start = System.nanoTime();
+		}
+
+		public void end() {
+			long elapsed = System.nanoTime() - start;
+			time += elapsed;
+		}
+		
+		public String explain(String indent) {
+			if (loop == 0) {
+				return ""; 
+			}
+			return indent  + "Rows Removed by Filter: " + rowRemovedByFilter;
+		}
+
+		public String executionStatistics() {
+			NumberFormat f = new DecimalFormat("###.##");
+			if (loop == 0) {
+				return "";
+			}
+			return "  (actual time=" + f.format(time / 1_000_000.) + " rows=" + rows/loop +" loops="+loop + ")";
+		}
+
+		
+	}
+	
+	
 	public static class NestedLoop implements Children {
 
 		Children first;
 		Children snd;
 		private List<? extends Column> columns;
 		private List<JoinFilter> filters;
+		private List<NestedLoopFilter> loopFilters;
+		private ExecutionReport report = new ExecutionReport();
 		
 		public NestedLoop(Children first, Children snd, List<JoinFilter> filters) {
 			super();
@@ -118,8 +182,7 @@ public class QueryExecutor {
 			this.snd = snd;
 			this.filters = filters;
 			this.columns = List.of(first.columns(), snd.columns()).stream().flatMap(List::stream).collect(Collectors.toList());
-			
-			
+			this.loopFilters = filters.stream().map(this::buildFilter).collect(Collectors.toList());
 		}
 		
 		public NestedLoopFilter buildFilter(JoinFilter filter) {
@@ -141,13 +204,23 @@ public class QueryExecutor {
 
 		@Override
 		public Stream<? extends DataRow> execute() {
-			List<NestedLoopFilter> loopFilters = filters.stream().map(this::buildFilter).collect(Collectors.toList());
-			
-			return first.execute().flatMap(f -> 
+			report.execute();
+			Stream<BiDataRow> resultat = first.execute().flatMap(f -> 
 					snd.execute()
 						.map(s -> new BiDataRow(f, s))
-						.filter(d -> loopFilters.stream().allMatch(filter -> filter.accept(d)))
-						);
+						.filter(this::filter)
+						)
+					.peek(__ -> report.count());
+			report.end();
+			return resultat;
+		}
+
+		private boolean filter(BiDataRow d) {
+			boolean allMatch = loopFilters.stream().allMatch(filter -> filter.accept(d));
+			if (!allMatch) {
+				report.removed();
+			}
+			return allMatch;
 		}
 
 		@Override
@@ -157,10 +230,12 @@ public class QueryExecutor {
 
 		@Override
 		public String explain(String indent) {
-			return indent + "Nested Loop" + "\n"
-						+ filters.stream().map(j -> j.explain(indent + "  ")).collect(Collectors.joining("\n")) + (filters.size() > 0 ? "\n" : "")
-						+ first.explain(indent + "  ") + "\n"
-						+ snd.explain(indent + "  ")
+			String executionReport = report.explain(indent + "    ");
+			return indent + "-> Nested Loop" + report.executionStatistics() + "\n"
+						+ filters.stream().map(j -> j.explain(indent + "    ")).collect(Collectors.joining("\n")) + (filters.size() > 0 ? "\n" : "")
+						+ (executionReport.isEmpty() ? "" : (executionReport + "\n"))
+						+ first.explain(indent + "    ") + "\n"
+						+ snd.explain(indent + "    ")
 						;
 		}
 		
@@ -251,6 +326,9 @@ public class QueryExecutor {
 	public static class Explain implements Children {
 
 		private final Children root;
+		private long planningTime;
+		private long executionTime = 0;
+		
 		
 		public Explain(Children root) {
 			super();
@@ -269,29 +347,62 @@ public class QueryExecutor {
 
 		@Override
 		public String explain(String indent) {
-			return root.explain(indent);
+			NumberFormat f = new DecimalFormat("###.##");
+			return root.explain(indent) 
+					+ "\nPlanning Time: " + f.format(planningTime / 1_000_000.) + " ms"
+					+ (executionTime !=0 ? "\nExecution Time: " + f.format(executionTime / 1_000_000.) + " ms" : "");
 		}
-
 
 		@Override
 		public String toString() {
 			return explain("");
+		}
+
+
+		public void setPlanningTime(long planningTime) {
+			this.planningTime = planningTime;
+		}
+
+		public void setExecutionTime(long executionTime) {
+			this.executionTime = executionTime;
 		}
 		
 	}
 	
 	
 	public Resultat execute() {
+		long start = System.nanoTime();
 		Explain current = explain();
-		System.out.println(current);
-
+		long stopExplain = System.nanoTime();
+		current.setPlanningTime(stopExplain - start);
+		
 		RowResultBuilder resultBuilder = new RowResultBuilder(current, RowBuilder.build(current, querySelect.columns()));
 
 		ResultatBuilder builder = new ResultatBuilder(querySelect.columns());
 		resultBuilder.execute().forEach(d -> builder.addRow(d.data()));
+		long stop = System.nanoTime();
+		current.setExecutionTime(stop - stopExplain);
+		
 		Resultat build = builder.build();
+		System.out.println(current);
 		System.out.println(build);
 		return build;
+	}
+
+	
+	public static interface AnalyseResult {
+		Explain explaination();
+		Resultat resultat();
+	}
+	
+	public Explain analyse() {
+		Explain current = explain();
+		RowResultBuilder resultBuilder = new RowResultBuilder(current, RowBuilder.build(current, querySelect.columns()));
+		resultBuilder.execute().forEach(this::ignore);
+		return current;
+	}
+	
+	private void ignore(DataRow __) {
 	}
 
 	public Explain explain() {
@@ -314,9 +425,9 @@ public class QueryExecutor {
 			for (QueryPredicateJoin q : queryJoinPredicates) {
 				// some algebra would help here
 				for (int j = 0; j < i; j++) {
-					if (tables.get(j).has(q.a) && tables.get(i).has(q.b) 
-							|| tables.get(j).has(q.b) && tables.get(i).has(q.a)) {
-						filters.add(new JoinFilter(q.a, q.b));
+					if (tables.get(j).has(q.getA()) && tables.get(i).has(q.getB()) 
+							|| tables.get(j).has(q.getB()) && tables.get(i).has(q.getA())) {
+						filters.add(new JoinFilter(q.getA(), q.getB()));
 					}
 				}
 

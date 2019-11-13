@@ -7,14 +7,12 @@ public class TableColumn implements Column {
 	
 	String name;
 	ColumnType type;
-	int index;
 	String qualifiedName;
 
-	public TableColumn(String name, String qualifiedName, ColumnType type, int index) {
+	public TableColumn(String name, String qualifiedName, ColumnType type) {
 		this.name = name;
 		this.qualifiedName = qualifiedName;
 		this.type = type;
-		this.index = index;
 	}
 
 	@Override
